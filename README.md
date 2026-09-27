@@ -7,11 +7,11 @@ intelligence. The backend is therefore not a chat proxy — it owns users, study
 generated artifacts, study sessions and progress, and treats AI providers as replaceable
 integrations behind one interface.
 
-**Status: the repository foundation and the database architecture are done.** The service
-boots, exposes a health endpoint, ships lint/format tooling, a test suite, and a ready-to-use
-Sequelize/PostgreSQL layer whose migrations and seeders are still empty. No study feature exists
-yet, and no domain model or table has been created. See
-[Current implementation](#current-implementation) and [Roadmap](#roadmap).
+**Status: Phase 0 (repository foundation) and Phase 1 (Sequelize database architecture) are
+complete.** The service boots, exposes a health endpoint, ships lint/format tooling, a test suite,
+and a ready-to-use Sequelize/PostgreSQL layer. The database phase is complete as architecture; its
+migrations and seeders are still empty, so no domain model or table exists yet. No study feature has
+been started. See [Current implementation](#current-implementation) and [Roadmap](#roadmap).
 
 ---
 
@@ -246,25 +246,26 @@ services, uploads and email behind their own layers — are specified in
 Each phase is developed and merged separately. A phase's **status** below is only
 [Implemented](#current-implementation) once its code is in `main`; everything else is still to do.
 
-| Phase | Scope                                                    | Status                                    |
-| ----- | -------------------------------------------------------- | ----------------------------------------- |
-| 0     | Repository foundation, entry point, conventions, tooling | Implemented                               |
-| 1     | Database layer, models and migrations                    | Architecture only — no model or table yet |
-| 2     | Authentication and authorization                         | Planned                                   |
-| 3     | Users and profiles                                       | Planned                                   |
-| 4     | Study material upload and text extraction                | Planned                                   |
-| 5     | Provider-independent AI integration                      | Planned                                   |
-| 6     | AI-generated summaries                                   | Planned                                   |
-| 7     | Flashcards                                               | Planned                                   |
-| 8     | Quizzes                                                  | Planned                                   |
-| 9     | Note-grounded Q&A                                        | Planned                                   |
-| 10    | Study sessions and progress tracking                     | Planned                                   |
-| 11    | Real-time updates (SSE) and background events            | Planned                                   |
-| 12    | Email and notification layer                             | Planned                                   |
+| Phase | Scope                                                    | Status                                        |
+| ----- | -------------------------------------------------------- | --------------------------------------------- |
+| 0     | Repository foundation, entry point, conventions, tooling | Implemented                                   |
+| 1     | Database layer, models and migrations                    | Architecture complete — no model or table yet |
+| 2     | Authentication and authorization                         | Planned                                       |
+| 3     | Users and profiles                                       | Planned                                       |
+| 4     | Study material upload and text extraction                | Planned                                       |
+| 5     | Provider-independent AI integration                      | Planned                                       |
+| 6     | AI-generated summaries                                   | Planned                                       |
+| 7     | Flashcards                                               | Planned                                       |
+| 8     | Quizzes                                                  | Planned                                       |
+| 9     | Note-grounded Q&A                                        | Planned                                       |
+| 10    | Study sessions and progress tracking                     | Planned                                       |
+| 11    | Real-time updates (SSE) and background events            | Planned                                       |
+| 12    | Email and notification layer                             | Planned                                       |
 
-Phase 1 owns the schema. Its plumbing (configuration, connection, model boundary, migration and
-seeder tooling, tests) is in place, but the first migration arrives with the first entity that needs
-a table — not before.
+Phase 1 is complete for the architecture: the Sequelize/PostgreSQL layer — configuration,
+connection, the model boundary, migration and seeder tooling, and its tests — is in place. The schema
+is what remains, because Phase 1 also owns it: the first migration arrives with the first entity that
+needs a table, not before.
 
 ## Contributing
 
