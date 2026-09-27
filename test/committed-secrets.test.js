@@ -1,10 +1,10 @@
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const { execFileSync } = require('node:child_process');
 const { describe, it } = require('node:test');
 
 const REPOSITORY_ROOT = path.join(__dirname, '..');
-const SKIPPED_DIRECTORIES = new Set(['.git', 'node_modules', 'coverage', 'dist', 'build']);
 
 // A PostgreSQL URL that carries an inline password. Documentation and tests are
 // allowed to show the *shape* of a connection string, so the obviously fake
@@ -23,16 +23,20 @@ const DOCUMENTED_PLACEHOLDER_PASSWORDS = new Set([
   '100%pure',
 ]);
 
-const listRepositoryFiles = directory =>
-  fs.readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
-    if (entry.isDirectory()) {
-      return SKIPPED_DIRECTORIES.has(entry.name)
-        ? []
-        : listRepositoryFiles(path.join(directory, entry.name));
-    }
-
-    return [path.join(directory, entry.name)];
+// Only files Git tracks are scanned. Walking the working tree instead would fail
+// for every developer who followed the setup instructions in the README: their
+// local `.env` holds a real credential by design, and it is never tracked, so
+// flagging it would report a leak that Git cannot publish. The question this
+// guard answers is "could a credential be committed", which is exactly the set
+// of tracked files.
+const listTrackedFiles = () => {
+  const output = execFileSync('git', ['ls-files', '-z'], {
+    cwd: REPOSITORY_ROOT,
+    encoding: 'utf8',
   });
+
+  return output.split('\0').filter(entry => entry !== '');
+};
 
 const readRepositoryFile = filePath => fs.readFileSync(filePath, 'utf8');
 
@@ -52,23 +56,41 @@ describe('committed secrets', () => {
   it('never writes a credentialed connection string into a tracked file', () => {
     const offenders = [];
 
-    for (const filePath of listRepositoryFiles(REPOSITORY_ROOT)) {
+    for (const relativePath of listTrackedFiles()) {
+      const filePath = path.join(REPOSITORY_ROOT, relativePath);
+
       for (const password of findCredentialBearingUrls(readRepositoryFile(filePath))) {
-        offenders.push(
-          `${path.relative(REPOSITORY_ROOT, filePath)} (password of length ${password.length})`,
-        );
+        offenders.push(`${relativePath} (password of length ${password.length})`);
       }
     }
 
     assert.deepEqual(offenders, []);
   });
 
-  it('keeps the real .env out of the working tree', () => {
-    const environmentFiles = fs
-      .readdirSync(REPOSITORY_ROOT)
-      .filter(entry => entry.startsWith('.env'));
+  // A developer's local `.env` is supposed to exist and to hold real credentials,
+  // so its presence in the working tree is expected, not a failure. What has to
+  // hold is that Git ignores it and therefore cannot commit it, which is what
+  // protects the password the moment it is written.
+  it('keeps the real .env ignored and untracked', () => {
+    const isIgnored = () => {
+      try {
+        execFileSync('git', ['check-ignore', '-q', '.env'], { cwd: REPOSITORY_ROOT });
 
-    assert.deepEqual(environmentFiles, ['.env.example']);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    assert.equal(isIgnored(), true, '.env must be listed in .gitignore');
+
+    const trackedEnvironmentFiles = listTrackedFiles().filter(
+      relativePath =>
+        path.basename(relativePath).startsWith('.env') &&
+        path.basename(relativePath) !== '.env.example',
+    );
+
+    assert.deepEqual(trackedEnvironmentFiles, []);
   });
 
   it('ships DATABASE_URL in the template without a value', () => {
